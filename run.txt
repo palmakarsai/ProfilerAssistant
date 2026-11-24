@@ -1,0 +1,3 @@
+from ProfilerAssistant import main, profiler_recording, profiler_evaluation, ProfilerAssistant_ui
+
+main.openWindow()
