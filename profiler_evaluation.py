@@ -4,9 +4,6 @@ import maya.cmds as cmds
 import re
 from pathlib import Path
 
-#def read_recorded_frame(frame):
-    #cmds.profiler(load = Path(output_path) / f"{file_name}_frame_{frame}_profiledata.txt")
-
 def get_event_count():
     event_count = cmds.profiler(query=True, eventCount=True)
     return event_count
