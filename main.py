@@ -14,10 +14,8 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import re
 
-import profiler_recording
-import profiler_evaluatio_speedUp
-
-from ProfilerAssistant_ui_v2 import Ui_Widget
+from ProfilerAssistant import profiler_recording, profiler_evaluation, ProfilerAssistant_ui
+from ProfilerAssistant.ProfilerAssistant_ui import Ui_Widget
 
 
 # Shared palette — slice with [:n] to fit any number of bars/wedges
@@ -34,7 +32,7 @@ class EvaluateWorker(QThread):
         self.top_n = top_n
 
     def run(self):
-        result = profiler_evaluatio_speedUp.execute_profiling(
+        result = profiler_evaluation.execute_profiling(
             self.files, self.top_n, self.progress.emit
         )
         self.finished.emit(result)

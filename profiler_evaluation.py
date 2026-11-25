@@ -1,8 +1,7 @@
-from functools import total_ordering
-
 import maya.cmds as cmds
 import re
 from pathlib import Path
+
 
 def get_event_count():
     event_count = cmds.profiler(query=True, eventCount=True)
@@ -10,7 +9,7 @@ def get_event_count():
 
 def build_category_cache(recorded_frames):
     cmds.profiler(load=recorded_frames[0])
-    category_names = cmds.profiler(query=True, allCategories=True)
+    category_names = cmds.profiler(query=True, allCategories=True) 
     return {i: name for i, name in enumerate(category_names)}
 
 def collect_events_info(event_count,category_cache, mode):
@@ -93,7 +92,6 @@ def event_duration_sum(events):
 
     return grouped_events
 
-
 # TODO: extract merging logic into helper function
 
 def category_duration_sum(events, category_name):
@@ -123,8 +121,7 @@ def extract_object(description):
     if bracket_match:
         return bracket_match.group(1)
 
-    # Case 2: Full namespaced path — keep as-is, it's already selectable
-    # e.g. "DeerLieDown_pose_01:Deer_rig_102:rArmFunctionShape"
+    # Case 2: Full namespaced path — it's already selectable
     # e.g. "fawn_creature_rg_001:wrap2"
     namespace_match = re.search(r'[\w]+(?::[\w]+)+', description)
     if namespace_match:
@@ -180,6 +177,7 @@ def sum_eval_events_by_node(events):
     return grouped_events
 
 
+
 def get_top_n_event_names(event_list,top_num):
     # Add top contributors to their correlating list
     sorted_event_list = sorted(event_list.items(), key=lambda x: x[1], reverse=True)
@@ -202,88 +200,68 @@ def get_median(data):
         # For odd length: the middle element
         return sorted_data[mid]
 
-def get_bound_type(recorded_frames, category_cache,  progress_callback=None):
 
-    total_steps = len(recorded_frames) * 2
-
-    #  create list for bound-types
+def get_bound_type_from_cache(all_frames_events):
     bound_type_list = []
+    eval_times = []
+    render_times = []
 
-    if not recorded_frames:
-        print("Recorded frames was empty")
-        return None
-
-    for idx, i in enumerate(recorded_frames):
-        #Read txt file
-        cmds.profiler(load = i)
-        #Collect all events info  and put them in a list of dicts
-        events = collect_events_info(get_event_count(), category_cache, mode="category")
-
+    for events in all_frames_events:
         evaluation_time = category_duration_sum(events, "Evaluation")
         render_time = category_duration_sum(events, "VP Evaluation")
-
-        print(f"eval time: {evaluation_time:.2f}")
-        print(f"render time: {render_time:.2f}")
-
+        eval_times.append(evaluation_time)
+        render_times.append(render_time)
         bound_type_list.append("EB" if evaluation_time > render_time else "RB")
 
-        if progress_callback:
-            progress_callback(int((idx + 1) / total_steps * 100))
 
-
-    # Get bound_type across frames
+# TODO: handle ties - currently defaults to RB
     EB_count = bound_type_list.count("EB")
     RB_count = bound_type_list.count("RB")
+    bound_type = "EB" if EB_count > RB_count else "RB"
 
-    # TODO: handle ties - currently defaults to RB
-    if EB_count > RB_count:
-        bound_type = "EB"
-    else:
-        bound_type = "RB"
-
-    return bound_type, evaluation_time, render_time
-
+    return bound_type, get_median(eval_times), get_median(render_times)
 
 
 def load_and_collect(filepath, category_cache):
-    # Load profile file and return all needed info
+    #Load a profile file once and return all events with full info.
     cmds.profiler(load=filepath)
     return collect_events_info(get_event_count(), category_cache, mode="all")
 
 def execute_profiling(recorded_frames, top_num,progress_callback=None):
     category_cache = build_category_cache(recorded_frames)
 
-    #Load each file once - cache the parsed events
+    # Load each file ONCE, cache the parsed events - should really speed things up
     all_frames_events = []
-    total= len(recorded_frames)
+    total = len(recorded_frames)
     for idx, frame_path in enumerate(recorded_frames):
-        event= load_and_collect(frame_path, category_cache)
-        all_frames_events.append(event)
+        events = load_and_collect(frame_path, category_cache)
+        all_frames_events.append(events)
+        if progress_callback:
+            progress_callback(int((idx + 1) / total * 50))  # first 50%
 
-    # Get bound type - from cache
-    bound_type, eval_time, render_time = get_bound_type(all_frames_events)
+    # Determine bound type - from cache
+    bound_type, eval_time, render_time = get_bound_type_from_cache(all_frames_events)
 
-    # Reference frame - from cache
-    ref_events = all_frames_events[1]
+    # Reference frame -  from cache
+    ref_events = all_frames_events[1] #Will give an error if only 1 frame is used - TODO: restrict user from only using 1 frame, min 3 maybe
     if bound_type == "EB":
         ref_grouped = sum_eval_events_by_node(ref_events)
     else:
         ref_grouped = event_duration_sum(ref_events)
+    top_event_names = get_top_n_event_names(ref_grouped, top_num) # TODO: This shouldn't be top_num, but a bigger pool than top_num
 
-    top_event_names = get_top_n_event_names(ref_grouped, top_num)
-
-    # Process all frames - from cache
+    # Process all frames — also from cache
     top_event_grp = {name: [] for name in top_event_names}
     for idx, events in enumerate(all_frames_events):
-        final_sum = (sum_eval_events_by_node(events)
-                     if bound_type == "EB"
-                     else event_duration_sum(events)
-                     )
+        final_sum = (sum_eval_events_by_node(events) if bound_type == "EB"
+                     else event_duration_sum(events))
         for name, dur in final_sum.items():
             if name in top_event_grp:
                 top_event_grp[name].append(dur)
+        if progress_callback:
+            progress_callback(50 + int((idx + 1) / total * 50))
 
-    #Get median of each event and store with event name
+    # Get median of each event/node and store with event/node name
     top_contributors = []
     for event_name, durations in top_event_grp.items():
         top_contributors.append({
@@ -291,13 +269,12 @@ def execute_profiling(recorded_frames, top_num,progress_callback=None):
             "median_duration": get_median(durations)
         })
 
-    #Sort by duration again to get top contributor event-duration pairs
+    # Sort by duration again to get top contributor event-duration pairs
     valid = [x for x in top_contributors if x["median_duration"] is not None]
     invalid = [x for x in top_contributors if x["median_duration"] is None]
 
     valid.sort(key=lambda x: x["median_duration"], reverse=True)
-    top_contributors_ranked = valid + invalid # force None to be at the end
-
+    top_contributors_ranked = valid + invalid  # force None to be at the end
 
      # Convert ticks to milliseconds
     TICKS_TO_MS = 1 / 1000.0
