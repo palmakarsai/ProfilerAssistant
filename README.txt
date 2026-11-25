@@ -27,7 +27,9 @@ as administrator or add `--user` to the command.
 
 ## Install
 1. Copy the 'ProfilerAssistant' folder into your Maya scripts folder
-   (e.g. Documents/maya/<version>/scripts).
+   (e.g. Documents/maya/<version>/scripts or Documents/maya/scripts ).
+
+2. Restart Maya afterwards
 
 2. In the Script Editor (Python tab), run:
 
@@ -36,6 +38,11 @@ main.openWindow()
 
 
 ## Known limitations
+
+- Install is not user friendly
+The tool is installed by copying the folder into Maya's scripts folder, and matplotlib has to be installed
+separately through mayapy. There is no installer, shelf button or Maya module yet.
+Planned fix: add a drag-and-drop installer 
 
 - Reference contributors are limited to the top 3 events of the second recorded frame.
 Events that only become significant in other frames may be missed.
@@ -60,6 +67,7 @@ contributors can't be selected in the scene.
 
 
 ## Next steps
+- drag-and-drop installer, including a shelf button and a check + auto install for matplotlib. (or ditching matplotlib?)
 - Restore the larger pool of reference contributors (top 5? 10?)
 - Replace the fixed event-type list with pattern-based node matching.
 - Handle ties between evaluation- and render-bound results.
