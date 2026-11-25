@@ -8,11 +8,18 @@ from maya import OpenMayaUI as omui
 from shiboken6 import wrapInstance
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtCore import QThread, Signal
-import matplotlib
-matplotlib.use('QtAgg')
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 import re
+
+try:
+    import matplotlib
+    matplotlib.use('QtAgg')
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.figure import Figure
+except ImportError:
+    cmds.warning("Profiler Assistant needs matplotlib. See the README for install steps.")
+    raise
+import matplotlib
+
 
 from ProfilerAssistant import profiler_recording, profiler_evaluation, ProfilerAssistant_ui
 from ProfilerAssistant.ProfilerAssistant_ui import Ui_Widget
