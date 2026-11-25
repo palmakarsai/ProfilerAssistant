@@ -2,7 +2,28 @@
 - Developed and tested on Maya 2026.
 - Uses PySide6, so Maya 2025 or newer is expected. Not tested on other
   versions.
-- matplotlib (used for the charts). (?)
+- matplotlib (used for the charts)
+
+### Installing matplotlib
+Run this in a terminal, using the `mayapy` that ships with your Maya:
+
+**Windows**
+```
+"C:\Program Files\Autodesk\Maya2026\bin\mayapy.exe" -m pip install matplotlib
+```
+
+**macOS**
+```
+/Applications/Autodesk/maya2026/Maya.app/Contents/bin/mayapy -m pip install matplotlib
+```
+
+**Linux**
+```
+/usr/autodesk/maya2026/bin/mayapy -m pip install matplotlib
+```
+
+Restart Maya afterwards. If you get a permissions error, run the terminal
+as administrator or add `--user` to the command.
 
 ## Install
 1. Copy the 'ProfilerAssistant' folder into your Maya scripts folder
